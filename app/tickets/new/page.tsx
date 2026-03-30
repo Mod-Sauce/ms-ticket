@@ -1,4 +1,4 @@
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { getAllTemplates } from "@/lib/templates";
 import Link from "next/link";
 import TicketCreateForm from "@/components/TicketCreateForm";

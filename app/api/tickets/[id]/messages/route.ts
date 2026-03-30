@@ -1,6 +1,5 @@
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { sendStoatDM } from "@/lib/stoat";
 
 export async function GET(
   request: Request,
@@ -53,7 +52,7 @@ export async function POST(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, discord_id")
+    .select("role")
     .eq("id", user.id)
     .single();
 
@@ -79,15 +78,6 @@ export async function POST(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // If staff replied, notify user via Stoat
-  if (isOwner && profile?.discord_id) {
-    const ticketUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/tickets/${id}`;
-    await sendStoatDM(
-      profile.discord_id,
-      `💬 New reply on your ticket:\n\n${message.trim()}\n\nView: ${ticketUrl}`
-    );
   }
 
   return NextResponse.json(newMessage, { status: 201 });

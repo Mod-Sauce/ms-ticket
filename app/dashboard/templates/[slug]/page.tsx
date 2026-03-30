@@ -1,6 +1,6 @@
 import { getTemplate } from "@/lib/templates";
 import TemplateEditor from "@/components/TemplateEditor";
-import { createServerSupabase } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";

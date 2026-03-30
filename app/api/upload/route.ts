@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: urlData } = supabase.storage.from(type).getPublicUrl(data);
+  const { data: urlData } = supabase.storage.from(type).getPublicUrl(filename);
 
   return NextResponse.json({ url: urlData.publicUrl });
 }

@@ -9,7 +9,7 @@ fields:
     placeholder: Short description of the bug
     maxLength: 100
   - name: mclo_gs_link
-    label: McLogs Link
+    label: McLogs Link to your log
     type: url
     required: true
     pattern: "^https?://(www\\.)?mclo\\.gs\\/.+"

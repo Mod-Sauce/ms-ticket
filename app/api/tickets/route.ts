@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth-session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -37,12 +38,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSession();
 
-  if (!user) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -53,15 +51,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Create ticket
+  const supabase = await createServerSupabase();
+
+  // Create ticket (default visibility is 'internal' - private)
   const { data: ticket, error: ticketError } = await supabase
     .from("tickets")
     .insert({
-      user_id: user.id,
+      user_id: session.userId,
       title,
       template_slug,
       status: "open",
-      visibility: "open",
+      visibility: "internal",
     })
     .select()
     .single();

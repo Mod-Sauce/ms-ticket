@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth-session";
 import { getTemplate } from "@/lib/templates";
 import TemplateEditor from "@/components/TemplateEditor";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -7,15 +8,15 @@ export const dynamic = "force-dynamic";
 
 export default async function EditTemplatePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const session = await getSession();
+
+  if (!session) redirect("/login");
+
   const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", session.userId)
     .single();
 
   if (profile?.role !== "owner") redirect("/");

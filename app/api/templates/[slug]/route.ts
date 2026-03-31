@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth-session";
 import { getTemplate, saveTemplate } from "@/lib/templates";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
@@ -19,20 +20,17 @@ export async function PUT(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const supabase = await createServerSupabase();
+  const session = await getSession();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const supabase = await createServerSupabase();
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", session.userId)
     .single();
 
   if (profile?.role !== "owner") {
@@ -49,20 +47,17 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const supabase = await createServerSupabase();
+  const session = await getSession();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const supabase = await createServerSupabase();
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", session.userId)
     .single();
 
   if (profile?.role !== "owner") {

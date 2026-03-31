@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth-session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getAllTemplates } from "@/lib/templates";
 import Link from "next/link";
@@ -6,12 +7,9 @@ import TicketCreateForm from "@/components/TicketCreateForm";
 export const dynamic = "force-dynamic";
 
 export default async function NewTicketPage() {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSession();
 
-  if (!user) {
+  if (!session) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
@@ -26,10 +24,11 @@ export default async function NewTicketPage() {
 
   const templates = getAllTemplates();
 
+  const supabase = await createServerSupabase();
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", session.userId)
     .single();
 
   return (
@@ -41,7 +40,7 @@ export default async function NewTicketPage() {
       </header>
       <main className="max-w-3xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-white mb-6">Create New Ticket</h1>
-        <TicketCreateForm templates={templates} userId={user.id} profile={profile} />
+        <TicketCreateForm templates={templates} userId={session.userId} profile={profile} />
       </main>
     </div>
   );

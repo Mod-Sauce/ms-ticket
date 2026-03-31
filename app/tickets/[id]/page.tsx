@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth-session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getTemplate } from "@/lib/templates";
 import Link from "next/link";
@@ -7,11 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function TicketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await getSession();
   const supabase = await createServerSupabase();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const { data: ticket } = await supabase
     .from("tickets")
@@ -42,14 +40,16 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
     .order("created_at", { ascending: true });
 
   const template = getTemplate(ticket.template_slug);
-  const isOwner = user && ticket.profiles?.role === "owner";
-  const isOwnTicket = user && ticket.user_id === user.id;
 
   let userProfile = null;
-  if (user) {
-    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  let isOwner = false;
+  if (session) {
+    const { data } = await supabase.from("profiles").select("*").eq("id", session.userId).single();
     userProfile = data;
+    isOwner = data?.role === "owner";
   }
+
+  const isOwnTicket = session && ticket.user_id === session.userId;
 
   return (
     <div className="min-h-screen bg-gray-950">

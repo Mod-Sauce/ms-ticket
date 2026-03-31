@@ -1,29 +1,25 @@
+import { getSession } from "@/lib/auth-session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getAllTemplates } from "@/lib/templates";
 import Link from "next/link";
 import TicketListClient from "@/components/TicketListClient";
 import ProfileCard from "@/components/ProfileCard";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSession();
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">Redirecting to login...</p>
-      </div>
-    );
+  if (!session) {
+    redirect("/login");
   }
 
+  const supabase = await createServerSupabase();
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", session.userId)
     .single();
 
   const templates = getAllTemplates();
@@ -40,6 +36,25 @@ export default async function DashboardPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        {isOwner && (
+          <section>
+            <div className="p-4 bg-purple-900/20 border border-purple-800 rounded-lg mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-purple-300 font-medium">👑 Owner Panel</h3>
+                  <p className="text-purple-400 text-sm mt-1">View and manage all tickets</p>
+                </div>
+                <Link
+                  href="/admin/tickets"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg transition"
+                >
+                  View All Tickets →
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+
         {isOwner && (
           <section>
             <div className="flex items-center justify-between mb-4">
@@ -79,7 +94,7 @@ export default async function DashboardPage() {
 
         <section>
           <h2 className="text-xl font-bold text-white mb-4">My Tickets</h2>
-          <MyTickets userId={user.id} />
+          <MyTickets userId={session.userId} />
         </section>
 
         <section>

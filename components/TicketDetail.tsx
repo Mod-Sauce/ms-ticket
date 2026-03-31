@@ -27,6 +27,8 @@ export default function TicketDetail({
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState(ticket.status);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [visibility, setVisibility] = useState(ticket.visibility);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
 
   const canReply = isOwnTicket || isOwner;
 
@@ -68,6 +70,31 @@ export default function TicketDetail({
     }
   };
 
+  const handleVisibilityToggle = async () => {
+    setUpdatingVisibility(true);
+    try {
+      const newVisibility = visibility === "open" ? "internal" : "open";
+      const res = await fetch(`/api/tickets/${ticket.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: newVisibility }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVisibility(data.visibility || newVisibility);
+      } else {
+        const error = await res.json();
+        console.error("Failed to update visibility:", error);
+        alert(error.error || "Failed to update visibility");
+      }
+    } catch (err) {
+      console.error("Error updating visibility:", err);
+      alert("Failed to update visibility");
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Ticket Header */}
@@ -88,20 +115,20 @@ export default function TicketDetail({
             </div>
             <h1 className="text-xl font-bold text-white">{ticket.title}</h1>
             <div className="flex items-center gap-2 mt-2">
-              <Avatar username={ticket.profiles?.username || "?"} size={20} />
+              <Avatar username={ticket.profiles?.username || "?"} avatarUrl={ticket.profiles?.avatar_url} size={20} />
               <span className="text-sm text-gray-400">
                 {ticket.profiles?.username || "unknown"}
               </span>
               <span className="text-gray-600">·</span>
               <span className="text-sm text-gray-500">
-                {new Date(ticket.created_at).toLocaleDateString()}
+                {new Date(ticket.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' })}
               </span>
             </div>
           </div>
 
           {/* Status control for owners */}
           {isOwner && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
               <select
                 value={status}
                 onChange={(e) => handleStatusChange(e.target.value)}
@@ -112,6 +139,18 @@ export default function TicketDetail({
                 <option value="pending">Pending</option>
                 <option value="closed">Closed</option>
               </select>
+              <button
+                onClick={handleVisibilityToggle}
+                disabled={updatingVisibility}
+                className={`px-3 py-1.5 text-sm rounded-lg font-medium transition disabled:opacity-50 ${
+                  visibility === "open"
+                    ? "bg-green-900 text-green-300 hover:bg-green-800"
+                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                }`}
+                title={visibility === "open" ? "Visible on homepage" : "Hidden from homepage"}
+              >
+                {updatingVisibility ? "..." : visibility === "open" ? "👁️ Public" : "🔒 Private"}
+              </button>
             </div>
           )}
         </div>
@@ -171,7 +210,7 @@ export default function TicketDetail({
         ) : (
           messages.map((msg: any) => (
             <div key={msg.id} className="flex gap-3">
-              <Avatar username={msg.profiles?.username || "?"} size={36} className="mt-1 flex-shrink-0" />
+              <Avatar username={msg.profiles?.username || "?"} avatarUrl={msg.profiles?.avatar_url} size={36} className="mt-1 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <span className="font-medium text-white">
@@ -183,7 +222,14 @@ export default function TicketDetail({
                     </span>
                   )}
                   <span className="text-xs text-gray-500">
-                    {new Date(msg.created_at).toLocaleString()}
+                    {new Date(msg.created_at).toLocaleString('en-US', {
+                      year: 'numeric',
+                      month: 'numeric',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
                   </span>
                 </div>
                 <div className="mt-1 p-3 bg-gray-900 border border-gray-800 rounded-lg">
@@ -198,7 +244,7 @@ export default function TicketDetail({
       {/* Reply Box */}
       {canReply ? (
         <form onSubmit={handleSendMessage} className="flex gap-3">
-          <Avatar username={currentUser?.username || "?"} size={36} className="mt-2 flex-shrink-0" />
+          <Avatar username={currentUser?.username || "?"} avatarUrl={currentUser?.avatar_url} size={36} className="mt-2 flex-shrink-0" />
           <div className="flex-1 flex gap-2">
             <textarea
               value={newMessage}

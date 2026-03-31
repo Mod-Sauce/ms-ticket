@@ -1,5 +1,8 @@
+import { getSession } from "@/lib/auth-session";
 import { createServerSupabase } from "@/lib/supabase/server";
+import FilterForm from "@/components/FilterForm";
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +12,7 @@ export default async function HomePage({
   searchParams: Promise<{ q?: string; template?: string; page?: string }>;
 }) {
   const params = await searchParams;
+  const session = await getSession();
   const supabase = await createServerSupabase();
   const query = params.q || "";
   const template = params.template || "";
@@ -38,7 +42,7 @@ export default async function HomePage({
 
   const totalPages = Math.ceil((count || 0) / perPage);
 
-  // Client-side search filter (for now, since full-text search needs setup)
+  // Client-side search filter
   let filteredTickets = tickets || [];
   if (query) {
     const q = query.toLowerCase();
@@ -54,49 +58,37 @@ export default async function HomePage({
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-white">Support Tickets</h1>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="px-4 py-2 text-sm text-gray-300 hover:text-white transition">
-              Login
-            </Link>
-            <Link href="/register" className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition">
-              Register
-            </Link>
+            {session ? (
+              <>
+                <Link href="/tickets/new" className="px-4 py-2 text-sm text-gray-300 hover:text-white transition">
+                  New Ticket
+                </Link>
+                <Link href="/dashboard" className="px-4 py-2 text-sm text-gray-300 hover:text-white transition">
+                  Dashboard
+                </Link>
+                <LogoutButton />
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="px-4 py-2 text-sm text-gray-300 hover:text-white transition">
+                  Login
+                </Link>
+                <Link href="/register" className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition">
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Search + Filter */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <form className="flex-1" method="GET">
-            <input
-              type="text"
-              name="q"
-              defaultValue={query}
-              placeholder="Search tickets..."
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            />
-            {template && <input type="hidden" name="template" value={template} />}
-          </form>
-          <form>
-            <select
-              name="template"
-              defaultValue={template}
-              onChange={(e) => e.target.form?.submit()}
-              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="">All types</option>
-              {templates?.map((t: any) => (
-                <option key={t.slug} value={t.slug}>{t.name}</option>
-              ))}
-            </select>
-          </form>
-          <Link
-            href="/tickets/new"
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition whitespace-nowrap"
-          >
-            + New Ticket
-          </Link>
-        </div>
+        <FilterForm
+          templates={templates || []}
+          currentTemplate={template}
+          currentQuery={query}
+        />
 
         {/* Ticket List */}
         <div className="space-y-3">
@@ -129,7 +121,7 @@ export default async function HomePage({
                     </p>
                   </div>
                   <div className="text-xs text-gray-500 whitespace-nowrap">
-                    {new Date(ticket.created_at).toLocaleDateString()}
+                    {new Date(ticket.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' })}
                   </div>
                 </div>
               </Link>

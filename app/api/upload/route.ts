@@ -1,14 +1,11 @@
+import { getSession } from "@/lib/auth-session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  const supabase = await createServerSupabase();
+  const session = await getSession();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -35,8 +32,9 @@ export async function POST(request: Request) {
   }
 
   const ext = file.name.split(".").pop() || "bin";
-  const filename = `${user.id}/${Date.now()}.${ext}`;
+  const filename = `${session.userId}/${Date.now()}.${ext}`;
 
+  const supabase = await createServerSupabase();
   const buffer = Buffer.from(await file.arrayBuffer());
   const { data, error } = await supabase.storage
     .from(type)

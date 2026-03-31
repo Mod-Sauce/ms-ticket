@@ -7,64 +7,116 @@ interface ProfileCardProps {
 }
 
 export default function ProfileCard({ profile }: ProfileCardProps) {
-  const [discordId, setDiscordId] = useState(profile?.discord_id || "");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || "");
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const handleSave = async () => {
-    setSaving(true);
+  const isOwner = profile?.role === "owner";
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image must be less than 2MB");
+      return;
+    }
+
+    setUploading(true);
     try {
-      const { createClient } = await import("@/lib/supabase");
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const formData = new FormData();
+      formData.append("file", file);
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({ discord_id: discordId })
-        .eq("id", user.id);
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (!error) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-      }
+      if (!uploadRes.ok) throw new Error("Upload failed");
+
+      const { url } = await uploadRes.json();
+
+      // Update profile with new avatar URL
+      const updateRes = await fetch("/api/profile/avatar", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: url }),
+      });
+
+      if (!updateRes.ok) throw new Error("Failed to update profile");
+
+      setAvatarUrl(url);
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 2000);
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Failed to upload avatar");
     } finally {
-      setSaving(false);
+      setUploading(false);
     }
   };
 
   return (
     <div className="p-6 bg-gray-900 border border-gray-800 rounded-xl">
       <div className="flex items-center gap-4 mb-6">
-        <Avatar username={profile?.username || "?"} size={64} />
-        <div>
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={profile?.username}
+            className="w-16 h-16 rounded-full object-cover"
+          />
+        ) : (
+          <Avatar username={profile?.username || "?"} size={64} />
+        )}
+        <div className="flex-1">
           <div className="text-lg font-bold text-white">{profile?.username}</div>
           <div className="text-sm text-gray-400 capitalize">{profile?.role || "user"}</div>
         </div>
       </div>
 
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">
-            Discord ID <span className="text-gray-500 text-xs">(for DM notifications via Stoat)</span>
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={discordId}
-              onChange={(e) => setDiscordId(e.target.value)}
-              placeholder="123456789012345678"
-              className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            />
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition disabled:opacity-50"
-            >
-              {saving ? "..." : saved ? "✓ Saved" : "Save"}
-            </button>
+        {isOwner && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Profile Picture
+            </label>
+            <div className="flex items-center gap-3">
+              <label className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg cursor-pointer transition disabled:opacity-50">
+                {uploading ? "Uploading..." : uploadSuccess ? "✓ Uploaded" : "Upload Image"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+              {avatarUrl && (
+                <button
+                  onClick={() => {
+                    setAvatarUrl("");
+                    fetch("/api/profile/avatar", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ avatar_url: null }),
+                    });
+                  }}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Max 2MB, images only</p>
           </div>
-        </div>
+        )}
 
         <form action="/api/auth/logout" method="POST">
           <button

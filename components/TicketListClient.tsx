@@ -40,7 +40,7 @@ export default function TicketListClient({ userId }: TicketListClientProps) {
           className="flex items-center justify-between p-4 bg-gray-900 border border-gray-800 rounded-xl hover:border-gray-700 transition"
         >
           <div className="flex items-center gap-3">
-            <Avatar username={ticket.profiles?.username || "?"} size={32} />
+            <Avatar username={ticket.profiles?.username || "?"} avatarUrl={ticket.profiles?.avatar_url} size={32} />
             <div>
               <div className="font-medium text-white">{ticket.title}</div>
               <div className="text-xs text-gray-500">{ticket.template_slug}</div>

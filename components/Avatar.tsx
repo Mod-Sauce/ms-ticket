@@ -16,6 +16,7 @@ export default function Avatar({ username, avatarUrl, size = 40, className = "" 
         alt={username}
         width={size}
         height={size}
+        style={{ width: size, height: size, minWidth: size, minHeight: size }}
         className={`rounded-full object-cover ${className}`}
       />
     );

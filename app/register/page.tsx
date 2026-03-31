@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -16,30 +15,30 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
-    const supabase = createClient();
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: `${username}@ticket.local`,
-      password,
-      options: {
-        data: { username },
-      },
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
     });
 
-    if (signUpError) {
-      setError(signUpError.message);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || "Registration failed");
       setLoading(false);
       return;
     }
 
-    router.push("/login");
+    // Use window.location.href for full page reload to ensure cookie is set
+    window.location.href = "/dashboard";
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950">
       <div className="w-full max-w-md p-8 bg-gray-900 rounded-xl border border-gray-800">
         <h1 className="text-2xl font-bold text-white mb-2">Create Account</h1>
-        <p className="text-gray-400 mb-6 text-sm">No email required — just pick a username and password</p>
-        
+        <p className="text-gray-400 mb-6 text-sm">Pick a username and password to get started</p>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-gray-300 mb-1">Username</label>
@@ -55,7 +54,7 @@ export default function RegisterPage() {
               pattern="[a-zA-Z0-9_]+"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm text-gray-300 mb-1">Password</label>
             <input
@@ -65,7 +64,7 @@ export default function RegisterPage() {
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
               placeholder="••••••••"
               required
-              minLength={6}
+              minLength={8}
             />
           </div>
 

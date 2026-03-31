@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth-session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -22,15 +23,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = await createServerSupabase();
+  const session = await getSession();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const supabase = await createServerSupabase();
 
   const body = await request.json();
   const { message } = body;
@@ -53,11 +52,11 @@ export async function POST(
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", session.userId)
     .single();
 
   const isOwner = profile?.role === "owner";
-  const isOwn = ticket.user_id === user.id;
+  const isOwn = ticket.user_id === session.userId;
 
   // Users can only message their own tickets, owners can message any
   if (!isOwn && !isOwner) {
@@ -69,7 +68,7 @@ export async function POST(
     .from("ticket_messages")
     .insert({
       ticket_id: id,
-      user_id: user.id,
+      user_id: session.userId,
       message: message.trim(),
       is_staff: isOwner,
     })

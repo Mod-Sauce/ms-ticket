@@ -1,46 +1,28 @@
-import { createServerClient } from "@supabase/ssr";
+import { verifyToken } from "@/lib/auth";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const token = request.cookies.get("session")?.value;
+  let user = null;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (token) {
+    const payload = await verifyToken(token);
+    if (payload) user = payload;
+  }
 
   const { pathname } = request.nextUrl;
 
   // Public routes - no auth needed
   const publicRoutes = ["/", "/login", "/register", "/tickets"];
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
   const isTicketDetail = /^\/tickets\/[a-f0-9-]+$/.test(pathname);
+  const isApiAuth = pathname.startsWith("/api/auth/");
 
-  if (isPublicRoute || isTicketDetail) {
-    return supabaseResponse;
+  if (isPublicRoute || isTicketDetail || isApiAuth) {
+    return NextResponse.next();
   }
 
-  // Protected routes
+  // Protected routes - require session
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -48,7 +30,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {

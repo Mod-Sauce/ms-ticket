@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth-session";
 import { getAllTemplates, saveTemplate } from "@/lib/templates";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
@@ -8,20 +9,17 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createServerSupabase();
+  const session = await getSession();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const supabase = await createServerSupabase();
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", session.userId)
     .single();
 
   if (profile?.role !== "owner") {
